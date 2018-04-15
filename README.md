@@ -1,5 +1,4 @@
 # Instruction Pipeline and Cache (IPLC) Simulator
-#test
 
 ## Due Date: Monday, April 30th, 2018
 
