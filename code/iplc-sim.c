@@ -33,7 +33,7 @@ void iplc_sim_process_pipeline_branch(int reg1, int reg2);
 void iplc_sim_process_pipeline_jump();
 void iplc_sim_process_pipeline_syscall();
 void iplc_sim_process_pipeline_nop();
-//test
+//Heres another git test to make sure I know what I'm doing
 // Outout performance results
 void iplc_sim_finalize();
 
