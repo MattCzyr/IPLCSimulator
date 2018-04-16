@@ -133,6 +133,20 @@ enum pipeline_stages {FETCH, DECODE, ALU, MEM, WRITEBACK};
 pipeline_t pipeline[MAX_STAGES];
 
 /************************************************************************************************/
+/* MISC Functions ******************************************************************************/
+/************************************************************************************************/
+/*
+ * Extracts the bits from val between lsb and msb (inclusive)
+ */
+uint32_t bit_extract(uint32_t val, uint32_t lsb, uint32_t msb)
+{
+	int diff = msb - lsb + 1;
+	uint32_t n = (1 << diff) - 1;
+	val = val >> lsb;
+    return val & n;
+}
+
+/************************************************************************************************/
 /* Cache Functions ******************************************************************************/
 /************************************************************************************************/
 /*
@@ -168,7 +182,11 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     cache = (cache_line_t *) malloc((sizeof(cache_line_t) * 1<<index));
     
     // Dynamically create our cache based on the information the user entered
+	// 1<<index is number of lines
     for (i = 0; i < (1<<index); i++) {
+		cache[i] = (cache_line_t) malloc(sizeof(cache_line_t));
+		cache[i]->valid = 0;
+		cache[i]->tag = NULL;
     }
     
     // init the pipeline -- set all data to zero and instructions to NOP
