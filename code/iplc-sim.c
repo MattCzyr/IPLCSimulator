@@ -34,6 +34,7 @@ void iplc_sim_process_pipeline_jump();
 void iplc_sim_process_pipeline_syscall();
 void iplc_sim_process_pipeline_nop();
 //Heres another git test to make sure I know what I'm doing
+//Hers a test to know what I'm doing.
 // Outout performance results
 void iplc_sim_finalize();
 
@@ -337,31 +338,37 @@ void iplc_sim_process_pipeline_rtype(char *instruction, int dest_reg, int reg1, 
 void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_address)
 {
     /* You must implement this function */
+	
 }
 
 void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_address)
 {
     /* You must implement this function */
+	
 }
 
 void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 {
     /* You must implement this function */
+	
 }
 
 void iplc_sim_process_pipeline_jump(char *instruction)
 {
     /* You must implement this function */
+	
 }
 
 void iplc_sim_process_pipeline_syscall()
 {
     /* You must implement this function */
+	
 }
 
 void iplc_sim_process_pipeline_nop()
 {
     /* You must implement this function */
+	
 }
 
 /************************************************************************************************/
