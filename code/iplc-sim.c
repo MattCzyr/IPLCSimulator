@@ -44,8 +44,8 @@ typedef struct cache_line
     // a tag
     // a method for handling varying levels of associativity
     // a method for selecting which item in the cache is going to be replaced
-	int* tag;
-	int valid;
+	int tag;
+	unsigned int valid;
 } cache_line_t;
 
 cache_line_t *cache=NULL;
@@ -138,10 +138,10 @@ pipeline_t pipeline[MAX_STAGES];
 /*
  * Extracts the bits from val between lsb and msb (inclusive)
  */
-uint32_t bit_extract(uint32_t val, uint32_t lsb, uint32_t msb)
+int bit_extract(int val, int lsb, int msb)
 {
 	int diff = msb - lsb + 1;
-	uint32_t n = (1 << diff) - 1;
+	int n = (1 << diff) - 1;
 	val = val >> lsb;
     return val & n;
 }
@@ -172,8 +172,9 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     printf("   BlockSize: %d \n", cache_blocksize );
     printf("   Associativity: %d \n", cache_assoc );
     printf("   BlockOffSetBits: %d \n", cache_blockoffsetbits );
-    printf("   CacheSize: %lu \n", cache_size );
-    
+    printf("   Cachesize: %lu \n", cache_size );
+	
+
     if (cache_size > MAX_CACHE_SIZE ) {
         printf("Cache too big. Great than MAX SIZE of %d .... \n", MAX_CACHE_SIZE);
         exit(-1);
@@ -184,9 +185,8 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     // Dynamically create our cache based on the information the user entered
 	// 1<<index is number of lines
     for (i = 0; i < (1<<index); i++) {
-		cache[i] = (cache_line_t) malloc(sizeof(cache_line_t));
-		cache[i]->valid = 0;
-		cache[i]->tag = NULL;
+		cache[i].tag = 0;
+		cache[i].valid = 0;
     }
     
     // init the pipeline -- set all data to zero and instructions to NOP
@@ -194,6 +194,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
         // itype is set to O which is NOP type instruction
         bzero(&(pipeline[i]), sizeof(pipeline_t));
     }
+	
 }
 
 /*
@@ -202,7 +203,8 @@ void iplc_sim_init(int index, int blocksize, int assoc)
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
-    /* You must implement this function */
+	cache[index].tag = tag; 
+    cache[index].valid = 1;
 }
 
 /*
@@ -227,8 +229,24 @@ int iplc_sim_trap_address(unsigned int address)
     int hit=0;
     
     // Call the appropriate function for a miss or hit
+	cache_access++;
+	//Use set index to setermine which cache set
+	index = bit_extract(address, cache_blockoffsetbits, cache_blockoffsetbits + cache_index - 1);
+	//Use tag to determine a match
+	tag = bit_extract(address, cache_blockoffsetbits + cache_index, 31);
+	printf("Address %x: Tag %x, Index %x \n", address, tag, index);
+	if(tag == cache[index].tag && cache[index].valid == 1) {
+		//iplc_sim_LRU_update_on_hit(index, index); 
+		cache_hit++;
+		hit = 1;
+	} else {
+		iplc_sim_LRU_replace_on_miss(index, tag);
+		cache_miss++;
+		hit = 0;
+	}
 
     /* expects you to return 1 for hit, 0 for miss */
+	
     return hit;
 }
 
