@@ -321,7 +321,7 @@ void iplc_sim_push_pipeline_stage()
     if (pipeline[MEM].itype == SW) {
     }
     
-    /* 5. Increment pipe_cycles 1 cycle for normal processing  --> pipe_cycles is initialized as pipeline_cycles-MWolf */
+    /* 5. Increment pipe_cycles 1 cycle for normal processing  --> pipe_cycles is initialized as pipeline_cycles */
 	pipeline_cycles+=1;
 	
     /* 6. push stages thru MEM->WB, ALU->MEM, DECODE->ALU, FETCH->ALU */
@@ -354,7 +354,9 @@ void iplc_sim_process_pipeline_rtype(char *instruction, int dest_reg, int reg1, 
 
 void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_address)
 {
-    /* You must implement this function */
+    /* This is a fairly straightforward function, just setting the variables in the fetch to match the provided LW arguments. 
+	All of these functions have the same kind of structure, so they're very streightforward. I'm not going to comment them all 
+	unless requested. -- M Wolf. */
 	iplc_sim_push_pipeline_stage();
     
     pipeline[FETCH].itype = LW;
