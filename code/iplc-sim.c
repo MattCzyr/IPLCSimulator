@@ -297,6 +297,17 @@ void iplc_sim_push_pipeline_stage()
     /* 2. Check for BRANCH and correct/incorrect Branch Prediction */
     if (pipeline[DECODE].itype == BRANCH) {
         int branch_taken = 0;
+		if (pipeline[DECODE].instruction_address != pipeline[FETCH].instruction_address + 4) { 	//if the next instruction is not 4 from the current instruction
+			branch_taken = 1;																	//(as in it's not the next line of code) then the branch was taken
+		}
+		if (branch_predict_taken != branch_taken){			//then there must be a nop put into the pipeline
+			pipeline_t temp = pipeline[FETCH];				//Make a temp variable to save the instruction information
+			pipeline[FETCH].itype = NOP;					//Make fetch a nop to simulate the branch predict mistake
+			iplc_sim_push_pipeline_stage();					//Move everything forward
+			instruction_count--;							//The nop is not counted as an instruction, but it will still add one to instruction count. We have to undo that.
+			pipeline[FETCH] = temp;							//Make fetch the new instruction again.
+		}
+		
     }
     
     /* 3. Check for LW delays due to use in ALU stage and if data hit/miss
