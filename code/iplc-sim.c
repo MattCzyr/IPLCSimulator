@@ -310,12 +310,11 @@ void iplc_sim_push_pipeline_stage()
     if (pipeline[MEM].itype == SW) {
     }
     
-    /* 5. Increment pipe_cycles 1 cycle for normal processing */
-	
-	pipe_cycles+=1;
+    /* 5. Increment pipe_cycles 1 cycle for normal processing  --> pipe_cycles is initialized as pipeline_cycles-MWolf */
+	pipeline_cycles+=1;
 	
     /* 6. push stages thru MEM->WB, ALU->MEM, DECODE->ALU, FETCH->ALU */
-	pipeline[WB] = pipeline[MEM];
+	pipeline[WRITEBACK] = pipeline[MEM];
 	pipeline[MEM] = pipeline[ALU];
 	pipeline[ALU] = pipeline[DECODE];
 	pipeline[DECODE] = pipeline[FETCH];
