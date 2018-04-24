@@ -307,6 +307,9 @@ void iplc_sim_push_pipeline_stage()
 			instruction_count--;							//The nop is not counted as an instruction, but it will still add one to instruction count. We have to undo that.
 			pipeline[FETCH] = temp;							//Make fetch the new instruction again.
 		}
+		else{
+			correct_branch_predictions++;
+		}
 		
     }
     
@@ -355,7 +358,7 @@ void iplc_sim_process_pipeline_rtype(char *instruction, int dest_reg, int reg1, 
 void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_address)
 {
     /* This is a fairly straightforward function, just setting the variables in the fetch to match the provided LW arguments. 
-	All of these functions have the same kind of structure, so they're very streightforward. I'm not going to comment them all 
+	All of these functions have the same kind of structure, so they're very straightforward. I'm not going to comment them all 
 	unless requested. -- M Wolf. */
 	iplc_sim_push_pipeline_stage();
     
