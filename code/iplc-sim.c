@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <assert.h>
 
 #define MAX_CACHE_SIZE 10240
 #define CACHE_MISS_DELAY 10 // 10 cycle cache miss penalty
@@ -33,11 +34,12 @@ void iplc_sim_process_pipeline_branch(int reg1, int reg2);
 void iplc_sim_process_pipeline_jump();
 void iplc_sim_process_pipeline_syscall();
 void iplc_sim_process_pipeline_nop();
-//Heres another git test to make sure I know what I'm doing
 // Outout performance results
 void iplc_sim_finalize();
 
-typedef struct cache_line
+typedef struct cache_line cache_line_t;
+
+struct cache_line
 {
     // Your data structures for implementing your cache should include:
     // a valid bit
@@ -46,9 +48,19 @@ typedef struct cache_line
     // a method for selecting which item in the cache is going to be replaced
 	int tag;
 	unsigned int valid;
-} cache_line_t;
+	cache_line_t *less_used;
+	cache_line_t *more_used;
+};
 
-cache_line_t *cache=NULL;
+typedef struct cache_set
+{
+	cache_line_t *lines;
+	cache_line_t *LRU;
+	cache_line_t *MRU;
+	unsigned int assoc;
+} cache_set_t;
+
+cache_set_t *cache=NULL;
 int cache_index=0;
 int cache_blocksize=0;
 int cache_blockoffsetbits = 0;
@@ -180,15 +192,29 @@ void iplc_sim_init(int index, int blocksize, int assoc)
         exit(-1);
     }
     
-    cache = (cache_line_t *) malloc((sizeof(cache_line_t) * 1<<index));
+	cache = (cache_set_t *) malloc((sizeof(cache_set_t) * (1<<index / assoc)));
     
     // Dynamically create our cache based on the information the user entered
 	// 1<<index is number of lines
-    for (i = 0; i < (1<<index); i++) {
-		cache[i].tag = 0;
-		cache[i].valid = 0;
+    for(i = 0; i < ((1<<index)/assoc); i++) {
+		cache[i] = (cache_set_t){.assoc = assoc}; //, .LRU = &(cache[i].lines[0]), .MRU = &(cache[i].lines[assoc-1])};
+		cache[i].lines = (cache_line_t *) malloc(sizeof(cache_line_t) * assoc);
+		for(int j = 0; j < assoc; j++) {
+			cache[i].lines[j] = (cache_line_t){.tag = 0, .valid = 0};
+			if(j != 0) {
+				cache[i].lines[j].less_used = &(cache[i].lines[j-1]);
+			} else {
+				cache[i].lines[j].less_used = NULL;
+			}
+			if(j != assoc - 1) {
+				cache[i].lines[j].more_used = &(cache[i].lines[j+1]);
+			} else {
+				cache[i].lines[j].more_used = NULL;
+			}
+		}
+		cache[i].LRU = &(cache[i].lines[0]);
+		cache[i].MRU = &(cache[i].lines[assoc-1]);
     }
-    
     // init the pipeline -- set all data to zero and instructions to NOP
     for (i = 0; i < MAX_STAGES; i++) {
         // itype is set to O which is NOP type instruction
@@ -203,8 +229,12 @@ void iplc_sim_init(int index, int blocksize, int assoc)
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
-	cache[index].tag = tag; 
-    cache[index].valid = 1;
+	cache[index].LRU->less_used = cache[index].MRU;
+	cache[index].MRU = cache[index].LRU;
+	cache[index].LRU = cache[index].LRU->more_used;
+	cache[index].MRU->less_used->more_used = cache[index].MRU;
+	cache[index].MRU->more_used = NULL;
+	cache[index].LRU->less_used = NULL;
 }
 
 /*
@@ -213,7 +243,21 @@ void iplc_sim_LRU_replace_on_miss(int index, int tag)
  */
 void iplc_sim_LRU_update_on_hit(int index, int assoc_entry)
 {
-    /* You must implement this function */
+	if(cache[index].MRU == &(cache[index].lines[assoc_entry])) {
+		return;
+	}
+	cache_line_t *tmp = cache[index].MRU;
+	cache[index].MRU = &(cache[index].lines[assoc_entry]);
+	if(cache[index].LRU == &(cache[index].lines[assoc_entry])) {
+		cache[index].LRU = cache[index].LRU->more_used;
+		cache[index].MRU->more_used->less_used = NULL;
+	} else {
+		cache[index].MRU->less_used->more_used = cache[index].MRU->more_used;
+		cache[index].MRU->more_used->less_used = cache[index].MRU->less_used;
+	}
+	cache[index].MRU->more_used = NULL;
+	cache[index].MRU->less_used = tmp;
+	tmp->more_used = cache[index].MRU;
 }
 
 /*
@@ -235,16 +279,26 @@ int iplc_sim_trap_address(unsigned int address)
 	//Use tag to determine a match
 	tag = bit_extract(address, cache_blockoffsetbits + cache_index, 31);
 	printf("Address %x: Tag %x, Index %x \n", address, tag, index);
-	if(tag == cache[index].tag && cache[index].valid == 1) {
-		//iplc_sim_LRU_update_on_hit(index, index); 
-		cache_hit++;
-		hit = 1;
-	} else {
-		iplc_sim_LRU_replace_on_miss(index, tag);
-		cache_miss++;
-		hit = 0;
+	//Check every entry in cache set for a matching tag
+	for(i = 0; i < cache_assoc; i++) {
+		//If there is a hit
+		if(tag == cache[index].lines[i].tag && cache[index].lines[i].valid == 1) {
+			cache_hit++;
+			if(cache_assoc > 1) {
+				iplc_sim_LRU_update_on_hit(index, i);
+			}
+			hit = 1;
+		}
 	}
-
+	//If we check every assoc tag and do not get a hit, we have a miss
+	if(hit == 0) {
+		cache_miss++;
+		cache[index].LRU->tag = tag;
+		cache[index].LRU->valid = 1;
+		if(cache_assoc > 1) {
+			iplc_sim_LRU_replace_on_miss(index, tag);
+		}
+	}
     /* expects you to return 1 for hit, 0 for miss */
 	
     return hit;
