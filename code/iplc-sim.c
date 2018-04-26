@@ -57,7 +57,6 @@ typedef struct cache_set
 	cache_line_t *lines;
 	cache_line_t *LRU;
 	cache_line_t *MRU;
-	unsigned int assoc;
 } cache_set_t;
 
 cache_set_t *cache=NULL;
@@ -192,23 +191,25 @@ void iplc_sim_init(int index, int blocksize, int assoc)
         exit(-1);
     }
     
-	cache = (cache_set_t *) malloc((sizeof(cache_set_t) * (1<<index / assoc)));
+	cache = (cache_set_t *) malloc((1<<index)*sizeof(cache_set_t));
     
     // Dynamically create our cache based on the information the user entered
 	// 1<<index is number of lines
-    for(i = 0; i < ((1<<index)/assoc); i++) {
-		cache[i] = (cache_set_t){.assoc = assoc}; //, .LRU = &(cache[i].lines[0]), .MRU = &(cache[i].lines[assoc-1])};
-		cache[i].lines = (cache_line_t *) malloc(sizeof(cache_line_t) * assoc);
+    for(i = 0; i < (1<<index); i++) {
+		cache[i].lines = (cache_line_t *) malloc(assoc*sizeof(cache_line_t));
 		for(int j = 0; j < assoc; j++) {
-			cache[i].lines[j] = (cache_line_t){.tag = 0, .valid = 0};
+			cache[i].lines[j].valid = 0; 
+			cache[i].lines[j].tag = 0; 
 			if(j != 0) {
 				cache[i].lines[j].less_used = &(cache[i].lines[j-1]);
 			} else {
+				//LRU
 				cache[i].lines[j].less_used = NULL;
 			}
 			if(j != assoc - 1) {
 				cache[i].lines[j].more_used = &(cache[i].lines[j+1]);
 			} else {
+				//MRU
 				cache[i].lines[j].more_used = NULL;
 			}
 		}
@@ -223,18 +224,25 @@ void iplc_sim_init(int index, int blocksize, int assoc)
 	
 }
 
+void destroy_cache() {
+	for(int i = 0; i < (1<<cache_index); i++) {
+		free(cache[i].lines);
+	}
+	free(cache);
+}
+
 /*
  * iplc_sim_trap_address() determined this is not in our cache.  Put it there
  * and make sure that is now our Most Recently Used (MRU) entry.
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
+	cache[index].LRU->more_used->less_used = cache[index].LRU->less_used;
 	cache[index].LRU->less_used = cache[index].MRU;
+	cache[index].MRU->more_used = cache[index].LRU;
 	cache[index].MRU = cache[index].LRU;
-	cache[index].LRU = cache[index].LRU->more_used;
-	cache[index].MRU->less_used->more_used = cache[index].MRU;
+	cache[index].LRU = cache[index].MRU->more_used;
 	cache[index].MRU->more_used = NULL;
-	cache[index].LRU->less_used = NULL;
 }
 
 /*
@@ -329,6 +337,8 @@ void iplc_sim_finalize()
     printf("\t Total Branch Instructions is %u \n", branch_count);
     printf("\t Total Correct Branch Predictions is %u \n", correct_branch_predictions);
     printf("\t CPI is %f \n\n", (double)pipeline_cycles / (double)instruction_count);
+	
+	destroy_cache();
 }
 
 /************************************************************************************************/
@@ -650,5 +660,7 @@ int main()
     }
     
     iplc_sim_finalize();
+	fclose(trace_file);
+	
     return 0;
 }
