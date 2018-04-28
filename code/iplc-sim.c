@@ -429,7 +429,7 @@ void iplc_sim_push_pipeline_stage()
 				intruction_count--;							//don't count as an instruction.
 			}*/
 			if (pipeline[ALU].stage.reg1 == pipeline[MEM].stage.dest_ref || pipeline[ALU].stage.reg2_or_constant == pipeline[MEM].stage.dest_reg){
-				delay_cycles++;
+				pipeline_cycles++;
 			}
 		}
 		
@@ -438,6 +438,7 @@ void iplc_sim_push_pipeline_stage()
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
     if (pipeline[MEM].itype == SW) {
+		
     }
     
     /* 5. Increment pipe_cycles 1 cycle for normal processing  --> pipe_cycles is initialized as pipeline_cycles */
