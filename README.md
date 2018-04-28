@@ -2,7 +2,7 @@
 
 ## Due Date: Monday, April 30th, 2018
 
-## You are to implement this project in groups of seven. Each team should consist of three coders, three documenters, and a manager,
+## You are to implement this project in groups of seven. Each team should consist of three coders, three documenters, and a manager.
 
 The manager will assemble the presentation from data provided by the others and coordinate the project. 
 
@@ -35,7 +35,7 @@ Used to help you debug your implementation.
 The figure below provides a example of the nearly 35,000 plus MIPS instruction
 trace. This trace is from a 2-D Matrix Swap and Multiply MIPS code.
 
-```assembly
+```
 0x00400000  lw $4, 0($29): 7fffef48
 0x00400004  addiu $5, $29, 4
 0x00400008  addiu $6, $5, 4
