@@ -318,6 +318,22 @@ void iplc_sim_push_pipeline_stage()
      */
     if (pipeline[MEM].itype == LW) {
         int inserted_nop = 0;
+		if (iplc_sim_trap_address(pipeline[MEM].stage.base_reg) == 0) {
+			pipeline_cycles+=CACHE_MISS_DELAY;
+		}
+		if (pipeline[ALU].itype == RTYPE) {					//checking for register issues
+			/*if(pipeline[ALU].stage.reg1 == pipeline[MEM].stage.dest_reg || pipeline[ALU].stage.reg2_or_constant == pipeline[MEM].stage.dest_reg){
+				iplc_sim_push_pipeline_stage();				//add the delay
+				pipeline[FETCH].itype = NOP;
+				inserted_nop = 1;
+				intruction_count--;							//don't count as an instruction.
+			}*/
+			if (pipeline[ALU].stage.reg1 == pipeline[MEM].stage.dest_ref || pipeline[ALU].stage.reg2_or_constant == pipeline[MEM].stage.dest_reg){
+				delay_cycles++;
+			}
+		}
+		
+		
     }
     
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
