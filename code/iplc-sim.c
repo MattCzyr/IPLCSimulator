@@ -220,7 +220,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     // init the pipeline -- set all data to zero and instructions to NOP
     for (i = 0; i < MAX_STAGES; i++) {
         // itype is set to O which is NOP type instruction
-        bzero(&(pipeline[i]), sizeof(pipeline_t));
+        memset(&(pipeline[i]), 0, sizeof(pipeline_t));
     }
 	
 }
@@ -395,63 +395,89 @@ void iplc_sim_push_pipeline_stage()
     }
     
     /* 2. Check for BRANCH and correct/incorrect Branch Prediction */
+	printf("Part 2 Start");
     if (pipeline[DECODE].itype == BRANCH) {
+		//printf("\tEntered decode branch");
         int branch_taken = 0;
 		if (pipeline[DECODE].instruction_address != pipeline[FETCH].instruction_address + 4) { 	//if the next instruction is not 4 from the current instruction
+		printf("\tEntered 2nd decode branch\n");
 			branch_taken = 1;																	//(as in it's not the next line of code) then the branch was taken
 		}
 		if (branch_predict_taken != branch_taken){			//then there must be a nop put into the pipeline
+		//printf("\tEntered branch predict branch");
 			pipeline_t temp = pipeline[FETCH];				//Make a temp variable to save the instruction information
+			pipeline_t temp2 = pipeline[DECODE];
 			pipeline[FETCH].itype = NOP;					//Make fetch a nop to simulate the branch predict mistake
+			pipeline[DECODE].itype = NOP;
 			iplc_sim_push_pipeline_stage();					//Move everything forward
 			instruction_count--;							//The nop is not counted as an instruction, but it will still add one to instruction count. We have to undo that.
 			pipeline[FETCH] = temp;							//Make fetch the new instruction again.
+			pipeline[MEM] = temp2;
 		}
 		else{
+			//printf("\tEntered else branch");
 			correct_branch_predictions++;
 		}
 		
     }
-    
+   // printf("\tComplete\n");
     /* 3. Check for LW delays due to use in ALU stage and if data hit/miss
      *    add delay cycles if needed.
      */
+	// printf("Part 3 Start");
     if (pipeline[MEM].itype == LW) {
+		//printf("\tEntered LW branch");
         int inserted_nop = 0;
-		if (iplc_sim_trap_address(pipeline[MEM].stage.base_reg) == 0) {
+		if (iplc_sim_trap_address(pipeline[MEM].stage.lw.base_reg) == 0) {
+			//printf("\tCache miss delay");
 			pipeline_cycles+=CACHE_MISS_DELAY;
 		}
-		if (pipeline[ALU].itype == RTYPE) {					//checking for register issues
+		if (pipeline[ALU].itype == RTYPE) {	
+//printf("\tEntered ALU branch"); 		//checking for register issues
 			/*if(pipeline[ALU].stage.reg1 == pipeline[MEM].stage.dest_reg || pipeline[ALU].stage.reg2_or_constant == pipeline[MEM].stage.dest_reg){
 				iplc_sim_push_pipeline_stage();				//add the delay
 				pipeline[FETCH].itype = NOP;
 				inserted_nop = 1;
 				intruction_count--;							//don't count as an instruction.
 			}*/
-			if (pipeline[ALU].stage.reg1 == pipeline[MEM].stage.dest_ref || pipeline[ALU].stage.reg2_or_constant == pipeline[MEM].stage.dest_reg){
+			if (pipeline[ALU].stage.rtype.reg1 == pipeline[MEM].stage.lw.dest_reg || pipeline[ALU].stage.rtype.reg2_or_constant == pipeline[MEM].stage.lw.dest_reg){
+				//printf("\tEntered Second ALU branch");
 				pipeline_cycles++;
 			}
 		}
 		
 		
     }
-    
+    //printf("\tComplete\n");
     /* 4. Check for SW mem acess and data miss .. add delay cycles if needed */
+	//printf("Part 4 Start");
     if (pipeline[MEM].itype == SW) {
-		
+		//printf("\tEntered SW branch");
+		if (iplc_sim_trap_address(pipeline[MEM].stage.sw.base_reg)==0) {
+			//printf("Entered trap address branch");
+			pipeline_cycles+=CACHE_MISS_DELAY;
+		}
     }
-    
+   // printf("\tComplete\n");
     /* 5. Increment pipe_cycles 1 cycle for normal processing  --> pipe_cycles is initialized as pipeline_cycles */
+	//printf("Part 5");
+	
 	pipeline_cycles+=1;
+	//printf("\tComplete\n");
 	
     /* 6. push stages thru MEM->WB, ALU->MEM, DECODE->ALU, FETCH->ALU */
+	//printf("Part6");
+	
 	pipeline[WRITEBACK] = pipeline[MEM];
 	pipeline[MEM] = pipeline[ALU];
 	pipeline[ALU] = pipeline[DECODE];
 	pipeline[DECODE] = pipeline[FETCH];
+	//printf("\tComplete\n");
     
     // 7. This is a give'me -- Reset the FETCH stage to NOP via bezero */
-    bzero(&(pipeline[FETCH]), sizeof(pipeline_t));
+	//printf("Part 7");
+    memset(&(pipeline[FETCH]), 0, sizeof(pipeline_t));
+	//printf("\tComplete\n");
 }
 
 /*
@@ -462,7 +488,7 @@ void iplc_sim_process_pipeline_rtype(char *instruction, int dest_reg, int reg1, 
 {
     /* This is an example of what you need to do for the rest */
     iplc_sim_push_pipeline_stage();
-    
+   // printf("RTYPE");
     pipeline[FETCH].itype = RTYPE;
     pipeline[FETCH].instruction_address = instruction_address;
     
@@ -478,7 +504,7 @@ void iplc_sim_process_pipeline_lw(int dest_reg, int base_reg, unsigned int data_
 	All of these functions have the same kind of structure, so they're very straightforward. I'm not going to comment them all 
 	unless requested. -- M Wolf. */
 	iplc_sim_push_pipeline_stage();
-    
+    //printf("LW");
     pipeline[FETCH].itype = LW;
     pipeline[FETCH].instruction_address = instruction_address;
     
@@ -493,7 +519,7 @@ void iplc_sim_process_pipeline_sw(int src_reg, int base_reg, unsigned int data_a
 {
     /* You must implement this function */
 	iplc_sim_push_pipeline_stage();
-    
+    //printf("SW");
     pipeline[FETCH].itype = SW;
     pipeline[FETCH].instruction_address = instruction_address;
     
@@ -507,7 +533,7 @@ void iplc_sim_process_pipeline_branch(int reg1, int reg2)
 {
     /* You must implement this function */
 	iplc_sim_push_pipeline_stage();
-    
+    //printf("BRANCH");
     pipeline[FETCH].itype = BRANCH;
     pipeline[FETCH].instruction_address = instruction_address;
     
@@ -520,7 +546,7 @@ void iplc_sim_process_pipeline_jump(char *instruction)
 {
     /* You must implement this function */
 	iplc_sim_push_pipeline_stage();
-    
+    //printf("JUMP");
     pipeline[FETCH].itype = JUMP;
     pipeline[FETCH].instruction_address = instruction_address;
     
@@ -532,7 +558,7 @@ void iplc_sim_process_pipeline_syscall()
 {
     /* You must implement this function */
 	iplc_sim_push_pipeline_stage();
-	
+	//printf("SYSCALL");
 	pipeline[FETCH].itype = SYSCALL;
     pipeline[FETCH].instruction_address = instruction_address;
 	
@@ -541,6 +567,7 @@ void iplc_sim_process_pipeline_syscall()
 void iplc_sim_process_pipeline_nop()
 {
     /* You must implement this function */
+	//printf("Nop");
 	iplc_sim_push_pipeline_stage();
 	
 	pipeline[FETCH].itype = NOP;
