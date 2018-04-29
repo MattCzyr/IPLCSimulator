@@ -184,7 +184,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
     printf("   BlockSize: %d \n", cache_blocksize );
     printf("   Associativity: %d \n", cache_assoc );
     printf("   BlockOffSetBits: %d \n", cache_blockoffsetbits );
-    printf("   Cachesize: %lu \n", cache_size );
+    printf("   CacheSize: %lu \n", cache_size );
 	
 
     if (cache_size > MAX_CACHE_SIZE ) {
@@ -287,7 +287,7 @@ int iplc_sim_trap_address(unsigned int address)
 	index = bit_extract(address, cache_blockoffsetbits, cache_blockoffsetbits + cache_index - 1);
 	//Use tag to determine a match
 	tag = bit_extract(address, cache_blockoffsetbits + cache_index, 31);
-	printf("Address %x: Tag %x, Index %x \n", address, tag, index);
+	printf("Address %x: Tag= %x, Index= %x \n", address, tag, index);
 	//Check every entry in cache set for a matching tag
 	for(i = 0; i < cache_assoc; i++) {
 		//If there is a hit
@@ -395,9 +395,10 @@ void iplc_sim_push_pipeline_stage()
     }
     
     /* 2. Check for BRANCH and correct/incorrect Branch Prediction */
-	printf("Part 2 Start");
+	//printf("Part 2 Start\n");
     if (pipeline[DECODE].itype == BRANCH) {
 		//printf("\tEntered decode branch");
+		branch_count++;
         int branch_taken = 0;
 		if (pipeline[DECODE].instruction_address != pipeline[FETCH].instruction_address + 4) { 	//if the next instruction is not 4 from the current instruction
 		printf("\tEntered 2nd decode branch\n");
