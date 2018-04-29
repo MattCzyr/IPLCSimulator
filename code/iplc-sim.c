@@ -37,21 +37,17 @@ void iplc_sim_process_pipeline_nop();
 // Outout performance results
 void iplc_sim_finalize();
 
+// Each line has a valid bit and tag, along with pointers to the next more used or less used line. This doubly linked list is what keeps track of LRU and MRU
 typedef struct cache_line cache_line_t;
-
 struct cache_line
 {
-    // Your data structures for implementing your cache should include:
-    // a valid bit
-    // a tag
-    // a method for handling varying levels of associativity
-    // a method for selecting which item in the cache is going to be replaced
 	int tag;
 	unsigned int valid;
 	cache_line_t *less_used;
 	cache_line_t *more_used;
 };
 
+// Cache set is accessed by index, and holds pointers to cache line info
 typedef struct cache_set
 {
 	cache_line_t *lines;
@@ -191,12 +187,11 @@ void iplc_sim_init(int index, int blocksize, int assoc)
         exit(-1);
     }
     
-	cache = (cache_set_t *) malloc((1<<index)*sizeof(cache_set_t));
+	cache = (cache_set_t *) malloc((1 << index) * sizeof(cache_set_t));
     
     // Dynamically create our cache based on the information the user entered
-	// 1<<index is number of lines
-    for(i = 0; i < (1<<index); i++) {
-		cache[i].lines = (cache_line_t *) malloc(assoc*sizeof(cache_line_t));
+    for(i = 0; i < (1 << index); i++) {
+		cache[i].lines = (cache_line_t *) malloc(assoc * sizeof(cache_line_t));
 		for(int j = 0; j < assoc; j++) {
 			cache[i].lines[j].valid = 0; 
 			cache[i].lines[j].tag = 0; 
@@ -225,7 +220,7 @@ void iplc_sim_init(int index, int blocksize, int assoc)
 }
 
 void destroy_cache() {
-	for(int i = 0; i < (1<<cache_index); i++) {
+	for(int i = 0; i < ( 1<<cache_index ); i++) {
 		free(cache[i].lines);
 	}
 	free(cache);
@@ -237,7 +232,7 @@ void destroy_cache() {
  */
 void iplc_sim_LRU_replace_on_miss(int index, int tag)
 {
-	cache[index].LRU->more_used->less_used = cache[index].LRU->less_used;
+	cache[index].LRU->more_used->less_used = NULL;
 	cache[index].LRU->less_used = cache[index].MRU;
 	cache[index].MRU->more_used = cache[index].LRU;
 	cache[index].MRU = cache[index].LRU;
@@ -296,6 +291,7 @@ int iplc_sim_trap_address(unsigned int address)
 				iplc_sim_LRU_update_on_hit(index, i);
 			}
 			hit = 1;
+			break;
 		}
 	}
 	//If we check every assoc tag and do not get a hit, we have a miss
