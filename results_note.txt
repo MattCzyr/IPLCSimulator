@@ -1,5 +1,0 @@
-compiled using:
-gcc iplc-sim.c -o iplc-sim.out -lm
-
-os:
-Fedora 26
