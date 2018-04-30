@@ -400,13 +400,13 @@ void iplc_sim_push_pipeline_stage()
 		//printf("\tEntered decode branch");
 		branch_count++;
         int branch_taken = 0;
-		if (pipeline[DECODE].instruction_address != pipeline[FETCH].instruction_address + 4) { 	//if the next instruction is not 4 from the current instruction
-		printf("\tEntered 2nd decode branch\n");
+		if (pipeline[DECODE].instruction_address + 4 != pipeline[FETCH].instruction_address) { 	//if the next instruction is not 4 from the current instruction
+		//printf("\tEntered 2nd decode branch\n");
 			branch_taken = 1;																	//(as in it's not the next line of code) then the branch was taken
 		}
-		if (branch_predict_taken != branch_taken){			//then there must be a nop put into the pipeline
-		//printf("\tEntered branch predict branch");
-			pipeline_t temp = pipeline[FETCH];				//Make a temp variable to save the instruction information
+		if (!branch_predict_taken || branch_taken){			//only if branch prediction is off or prediction is bad
+		//printf("\tEntered branch predict branch");		//then there must be a nop put into the pipeline
+			/*pipeline_t temp = pipeline[FETCH];				//Make a temp variable to save the instruction information
 			pipeline_t temp2 = pipeline[DECODE];
 			pipeline[FETCH].itype = NOP;					//Make fetch a nop to simulate the branch predict mistake
 			pipeline[DECODE].itype = NOP;
@@ -414,6 +414,12 @@ void iplc_sim_push_pipeline_stage()
 			instruction_count--;							//The nop is not counted as an instruction, but it will still add one to instruction count. We have to undo that.
 			pipeline[FETCH] = temp;							//Make fetch the new instruction again.
 			pipeline[MEM] = temp2;
+			*/
+			pipeline[WRITEBACK] = pipeline[MEM];
+			pipeline[MEM] = pipeline[ALU];
+			pipeline[ALU].itype = NOP;
+			pipeline_cycles++;
+			
 		}
 		else{
 			//printf("\tEntered else branch");
